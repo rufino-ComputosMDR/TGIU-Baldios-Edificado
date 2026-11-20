@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquidación TGIU - Mismo Lote (Edificado / Baldío) Histórica 2013-2026</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e2e8f0;
+            color: #1e293b;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 1320px;
+            width: 100%;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-bar h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.25rem;
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-pdf {
+            background-color: #dc2626;
+            color: #ffffff;
+            border: none;
+            padding: 9px 14px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+        }
+        .btn-pdf:hover { background-color: #b91c1c; }
+        .btn-excel-tpl {
+            background-color: #059669;
+            color: #ffffff;
+            border: none;
+            padding: 9px 14px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+        }
+        .btn-excel-tpl:hover { background-color: #047857; }
+        .btn-excel-clean {
+            background-color: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 9px 14px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+        .btn-excel-clean:hover { background-color: #1d4ed8; }
+        .excel-loader {
+            background-color: #eff6ff;
+            border: 2px dashed #3b82f6;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .excel-status {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #1e40af;
+        }
+        .filtros-panel {
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .grid-datos-lote {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #cbd5e1;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 1100px) {
+            .grid-datos-lote { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (max-width: 650px) {
+            .grid-datos-lote { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group-wide {
+            grid-column: span 2;
+        }
+        .nueva-fila {
+            grid-column-start: 1;
+        }
+        @media (max-width: 650px) {
+            .form-group-wide { grid-column: span 2; }
+        }
+        label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        input, select {
+            padding: 6px 8px;
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            font-size: 0.88rem;
+            background-color: #fff;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        .badge-categ {
+            background-color: #e0e7ff;
+            color: #1e3a8a;
+            border: 1px solid #93c5fd;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 31px;
+            box-sizing: border-box;
+        }
+        .opciones-paralelas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 960px) {
+            .opciones-paralelas { grid-template-columns: 1fr; }
+        }
+        .box-opciones {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+        }
+        .box-opc-edif { background-color: #f0fdf4; border-color: #86efac; }
+        .box-opc-bald { background-color: #fffbeb; border-color: #fcd34d; }
+        .box-opciones-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .box-opc-edif .box-opciones-title { color: #065f46; }
+        .box-opc-bald .box-opciones-title { color: #92400e; }
+        .checks-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        @media (max-width: 600px) {
+            .checks-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        .check-item {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #1e293b;
+            user-select: none;
+        }
+        .check-item input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            margin: 0;
+            cursor: pointer;
+        }
+        .acciones-form {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        @media (max-width: 600px) {
+            .acciones-form { grid-template-columns: 1fr; }
+        }
+        .btn-generar {
+            background-color: #1e40af;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-generar:hover { background-color: #1d4ed8; }
+        .paralelo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 960px) {
+            .paralelo-grid { grid-template-columns: 1fr; }
+        }
+        .card-panel {
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-edif { border: 2px solid #10b981; }
+        .card-bald { border: 2px solid #f59e0b; }
+        .header-edif {
+            background-color: #065f46;
+            color: #ffffff;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-bald {
+            background-color: #92400e;
+            color: #ffffff;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .scroll-cuotas { max-height: 250px; overflow-y: auto; }
+        .scroll-detalle { max-height: 310px; overflow-y: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        th {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            font-weight: 700;
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid #94a3b8;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        td {
+            padding: 5px 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .num { text-align: right; font-family: 'Consolas', monospace; }
+        .center { text-align: center; }
+        .tabla-cuotas-estado tbody tr { cursor: pointer; transition: background-color 0.1s; }
+        .tabla-cuotas-estado tbody tr:hover { background-color: #f1f5f9; }
+        .tabla-cuotas-estado tbody tr.selected-edif {
+            background-color: #064e3b !important;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .tabla-cuotas-estado tbody tr.selected-bald {
+            background-color: #78350f !important;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .tag-solapa {
+            background: #e2e8f0;
+            color: #334155;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+        tr.selected-edif .tag-solapa, tr.selected-bald .tag-solapa {
+            background: rgba(255,255,255,0.2);
+            color: #ffffff;
+        }
+        .footer-total-card {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #cbd5e1;
+        }
+        .footer-edif { background-color: #ecfdf5; color: #065f46; }
+        .footer-bald { background-color: #fffbeb; color: #92400e; }
+        .footer-total-card strong { font-family: 'Consolas', monospace; font-size: 1.05rem; }
+        .resumen-diferencia {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.92rem;
+        }
+        .resumen-diferencia strong { font-family: 'Consolas', monospace; font-size: 1.08rem; color: #1e40af; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <h2>Simulador Liquidación TGIU - Mismo Lote (Edificado / Baldío)</h2>
+        <div class="header-actions">
+            <button type="button" class="btn-excel-clean" onclick="exportarExcelUnificado()">🧹 Exportar Excel Unificado</button>
+            <button type="button" class="btn-excel-tpl" onclick="descargarPlantillaExcel()">📥 Plantilla 12 Meses</button>
+            <button type="button" class="btn-pdf" onclick="descargarPDF()">📄 Liquidación en PDF</button>
+        </div>
+    </div>
+
+    <!-- Cargador del archivo Excel -->
+    <div class="excel-loader">
+        <div>
+            <label for="archivoExcel" style="font-size: 0.88rem; color: #0f172a; display: block; margin-bottom: 3px;">
+                📂 Seleccionar planilla Excel (<code>CALCULO TASA URBANA-1.xls</code> o planilla unificada):
+            </label>
+            <input type="file" id="archivoExcel" accept=".xls,.xlsx" onchange="procesarExcel(event)">
+        </div>
+        <div class="excel-status" id="estadoExcel">
+            ⚠️ Usando valores base de respaldo (Oct 2026). Carga tu Excel para leer y unificar todas las solapas mensuales.
+        </div>
+    </div>
+
+    <!-- Panel Único de Datos Físicos del Lote + Tildes Separados por Estado -->
+    <div class="filtros-panel">
+        <div class="grid-datos-lote">
+            <!-- Renglón 1: Identificación y Zonificación -->
+            <div class="form-group">
+                <label>N° Padrón:</label>
+                <input type="text" id="padron" value="015008U">
+            </div>
+            <div class="form-group form-group-wide">
+                <label>Titular:</label>
+                <input type="text" id="titular" placeholder="Ingrese apellido y nombre / razón social...">
+            </div>
+            <div class="form-group">
+                <label>Zona:</label>
+                <select id="zona" onchange="alCambiarZona()">
+                    <option value="1A">Zona 1A</option>
+                    <option value="1B">Zona 1B</option>
+                    <option value="2A">Zona 2A</option>
+                    <option value="2B">Zona 2B</option>
+                    <option value="2C">Zona 2C</option>
+                    <option value="2C+5000">Zona 2C+5000</option>
+                    <option value="3" selected>Zona 3</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Regla % Baldío:</label>
+                <select id="modoAdicBaldio" onchange="actualizarCategoriaVisual(); generarLiquidacion();">
+                    <option value="excel" selected>Histórico / Excel Automático</option>
+                    <option value="manual">Manual (% fijo abajo)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Adic. Baldío Manual (%):</label>
+                <input type="number" id="adicBaldioPct" step="1" value="60" onchange="document.getElementById('modoAdicBaldio').value='manual'; actualizarCategoriaVisual(); generarLiquidacion();">
+            </div>
+            <div class="form-group">
+                <label>Categorías / Regla:</label>
+                <div class="badge-categ" id="displayCategoria">Edif: Cat. 9 | Bald: Cat. 10 (Histórico)</div>
+            </div>
+
+            <!-- Renglón 2: Período y Medidas Físicas -->
+            <div class="form-group nueva-fila">
+                <label>Desde Fecha:</label>
+                <input type="date" id="fechaDesde" value="2026-06-01">
+            </div>
+            <div class="form-group">
+                <label>Hasta Fecha:</label>
+                <input type="date" id="fechaHasta" value="2026-10-31">
+            </div>
+            <div class="form-group">
+                <label>Frente (mts):</label>
+                <input type="number" id="frente" step="0.01" value="10.00">
+            </div>
+            <div class="form-group">
+                <label>Superficie (m²):</label>
+                <input type="number" id="superficie" step="0.01" value="250.00">
+            </div>
+            <div class="form-group">
+                <label>Mts. Alumbrado:</label>
+                <input type="number" id="metrosAlumb" step="0.01" value="10.00">
+            </div>
+        </div>
+
+        <div class="opciones-paralelas">
+            <div class="box-opciones box-opc-edif">
+                <span class="box-opciones-title">🏠 Conceptos que liquidan en EDIFICADO (AUM.FTE / 12, AUM.SUP / 12, CAR.FIJO):</span>
+                <div class="checks-row">
+                    <label class="check-item"><input type="checkbox" id="edif_alumbrado" checked onchange="generarLiquidacion()"> Alumbrado</label>
+                    <label class="check-item"><input type="checkbox" id="edif_fop" checked onchange="generarLiquidacion()"> FOP (15%)</label>
+                    <label class="check-item"><input type="checkbox" id="edif_fondoVial" checked onchange="generarLiquidacion()"> F. Vial (10%)</label>
+                    <label class="check-item"><input type="checkbox" id="edif_fana" checked onchange="generarLiquidacion()"> F.A.N.A.</label>
+                    <label class="check-item"><input type="checkbox" id="edif_bomberos" checked onchange="generarLiquidacion()"> Bomberos</label>
+                </div>
+            </div>
+
+            <div class="box-opciones box-opc-bald">
+                <span class="box-opciones-title">🌱 Conceptos que liquidan en BALDÍO (Base mensual × (1 + Adic. Baldío %)):</span>
+                <div class="checks-row">
+                    <label class="check-item"><input type="checkbox" id="bald_alumbrado" checked onchange="generarLiquidacion()"> Alumbrado</label>
+                    <label class="check-item"><input type="checkbox" id="bald_fop" checked onchange="generarLiquidacion()"> FOP (15%)</label>
+                    <label class="check-item"><input type="checkbox" id="bald_fondoVial" checked onchange="generarLiquidacion()"> F. Vial (10%)</label>
+                    <label class="check-item"><input type="checkbox" id="bald_fana" checked onchange="generarLiquidacion()"> F.A.N.A.</label>
+                    <label class="check-item"><input type="checkbox" id="bald_bomberos" checked onchange="generarLiquidacion()"> Bomberos</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="acciones-form">
+            <button type="button" class="btn-generar" onclick="generarLiquidacion()">Calcular Períodos Mes por Mes</button>
+            <button type="button" class="btn-pdf" onclick="descargarPDF()">📄 Exportar PDF</button>
+        </div>
+    </div>
+
+    <!-- BLOQUE SUPERIOR PARALELO: DETALLE DE CUOTAS SEPARADO POR ESTADO -->
+    <div class="paralelo-grid">
+        <div class="card-panel card-edif">
+            <div class="header-edif">
+                <span>🏠 Detalle / Cuotas EDIFICADO</span>
+                <span id="badgeCuotasEdif">Zona 3 - Cat. 9</span>
+            </div>
+            <div class="scroll-cuotas">
+                <table id="tablaCuotasEdif" class="tabla-cuotas-estado">
+                    <thead>
+                        <tr>
+                            <th>Padrón</th>
+                            <th class="center">Año</th>
+                            <th class="center">Cuota</th>
+                            <th>Solapa</th>
+                            <th class="center">Vto.</th>
+                            <th class="num">Importe ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="footer-total-card footer-edif">
+                <span>Total Acumulado Edificado (<span id="cantEdif">0</span> cuotas):</span>
+                <strong id="totalAcumEdif">$ 0.00</strong>
+            </div>
+        </div>
+
+        <div class="card-panel card-bald">
+            <div class="header-bald">
+                <span>🌱 Detalle / Cuotas BALDÍO</span>
+                <span id="badgeCuotasBald">Zona 3 - Cat. 10</span>
+            </div>
+            <div class="scroll-cuotas">
+                <table id="tablaCuotasBald" class="tabla-cuotas-estado">
+                    <thead>
+                        <tr>
+                            <th>Padrón</th>
+                            <th class="center">Año</th>
+                            <th class="center">Cuota</th>
+                            <th>Solapa / % Baldío</th>
+                            <th class="center">Vto.</th>
+                            <th class="num">Importe ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="footer-total-card footer-bald">
+                <span>Total Acumulado Baldío (<span id="cantBald">0</span> cuotas):</span>
+                <strong id="totalAcumBald">$ 0.00</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA COMPARATIVA DE DIFERENCIA ACUMULADA -->
+    <div class="resumen-diferencia">
+        <span>💡 Haz clic en cualquier mes de cualquiera de las dos grillas para inspeccionar su conformación abajo.</span>
+        <div>Diferencia Acumulada (Baldío - Edificado): <strong id="resDiferencia">$ 0.00</strong></div>
+    </div>
+
+    <!-- BLOQUE INFERIOR PARALELO: CONFORMACIÓN DEL MES SELECCIONADO -->
+    <div class="paralelo-grid" style="margin-bottom: 0;">
+        <div class="card-panel card-edif">
+            <div class="header-edif">
+                <span id="tituloDetalleEdif">🏠 Conformación EDIFICADO</span>
+                <span id="subtituloDetalleEdif">Zona 3 - Cat. 9</span>
+            </div>
+            <div class="scroll-detalle">
+                <table id="tablaDetalleEdif">
+                    <thead>
+                        <tr>
+                            <th class="center">Cód.</th>
+                            <th>Concepto</th>
+                            <th>Detalle / Fórmula</th>
+                            <th class="num">Importe ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-panel card-bald">
+            <div class="header-bald">
+                <span id="tituloDetalleBald">🌱 Conformación BALDÍO</span>
+                <span id="subtituloDetalleBald">Zona 3 - Cat. 10</span>
+            </div>
+            <div class="scroll-detalle">
+                <table id="tablaDetalleBald">
+                    <thead>
+                        <tr>
+                            <th class="center">Cód.</th>
+                            <th>Concepto</th>
+                            <th>Detalle / Fórmula</th>
+                            <th class="num">Importe ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let mesesCalculados = [];
+    let mesSeleccionadoIdx = 0;
+    let DATOS_SOLAPAS = {};
+
+    const MAPA_ZONAS = {
+        "1A":      { edificado: 1,  baldio: 3,  adicBaldio: 400 },
+        "1B":      { edificado: 2,  baldio: 4,  adicBaldio: 350 },
+        "2A":      { edificado: 5,  baldio: 7,  adicBaldio: 250 },
+        "2B":      { edificado: 6,  baldio: 8,  adicBaldio: 100 },
+        "2C":      { edificado: 11, baldio: 12, adicBaldio: 70  },
+        "2C+5000": { edificado: 11, baldio: 12, adicBaldio: 70  },
+        "3":       { edificado: 9,  baldio: 10, adicBaldio: 60  }
+    };
+
+    const ORDEN_ZONAS = ["1A", "1B", "2A", "2B", "3", "2C", "2C+5000"];
+    const NOMBRES_MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Set", "Oct", "Nov", "Dic"];
+    const NOMBRES_MESES_LARGOS = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+
+    const RESPALDO_OCT_2026 = {
+        nombreSolapa: "Respaldo Oct-2026",
+        zonasBase: {
+            "1A":      { aumFte: 4176.8485, aumSup: 314.3093, carFijo: 2509.6944 },
+            "1B":      { aumFte: 3155.0444, aumSup: 314.3093, carFijo: 2509.6944 },
+            "2A":      { aumFte: 1756.7861, aumSup: 121.8994, carFijo: 1876.2953 },
+            "2B":      { aumFte: 1685.0805, aumSup: 87.2418,  carFijo: 1804.5898 },
+            "3":       { aumFte: 489.9880,  aumSup: 4.6609,   carFijo: 1195.0926 },
+            "2C":      { aumFte: 878.3930,  aumSup: 1.3146,   carFijo: 1403.0387 },
+            "2C+5000": { aumFte: 878.3930,  aumSup: 1.3146,   carFijo: 4660.8610 }
+        },
+        adicBaldio: {},
+        alumbFrente: 22.9800,
+        alumbFijo: 2297.8200,
+        bomberos: 406.3800
+    };
+
+    function obtenerPorcentajeBaldioPorFecha(anio, mes, zona) {
+        const clave = `${anio}-${String(mes).padStart(2, '0')}`;
+        if (clave < '2015-04') {
+            const tabla2013 = { "1A": 300, "1B": 200, "2A": 50, "2B": 11, "2C": 70, "2C+5000": 70, "3": 11 };
+            return tabla2013[zona] ?? 11;
+        }
+        if (clave < '2021-02') {
+            const tabla2015 = { "1A": 300, "1B": 200, "2A": 100, "2B": 75, "2C": 70, "2C+5000": 70, "3": 60 };
+            return tabla2015[zona] ?? 60;
+        }
+        return MAPA_ZONAS[zona]?.adicBaldio ?? 60;
+    }
+
+    window.onload = function() {
+        alCambiarZona();
+    };
+
+    function formatearMoneda(valor) {
+        return `$ ${valor.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function normalizarZona(texto) {
+        if (texto === null || texto === undefined) return null;
+        const clean = String(texto).trim().toUpperCase().replace(/\s+/g, '');
+        if (['1A', '1B', '2A', '2B', '2C', '2C+5000', '3'].includes(clean)) return clean;
+        return null;
+    }
+
+    function extraerNumeroDeTexto(txt) {
+        const m = txt.match(/(\d+(?:[.,]\d+)?)/);
+        if (!m) return null;
+        return parseFloat(m[1].replace(',', '.'));
+    }
+
+    function alCambiarZona() {
+        const zona = document.getElementById('zona').value;
+        const info = MAPA_ZONAS[zona];
+        document.getElementById('adicBaldioPct').value = info.adicBaldio;
+        actualizarCategoriaVisual();
+        generarLiquidacion();
+    }
+
+    function actualizarCategoriaVisual() {
+        const zona = document.getElementById('zona').value;
+        const cats = MAPA_ZONAS[zona];
+        const modo = document.getElementById('modoAdicBaldio').value;
+        const adicPct = parseFloat(document.getElementById('adicBaldioPct').value) || 0;
+        const etqAdic = modo === 'excel' ? 'Histórico/Excel' : `+${adicPct}% fijo`;
+        document.getElementById('displayCategoria').innerText = `Edif: Cat. ${cats.edificado} | Bald: Cat. ${cats.baldio} (${etqAdic})`;
+        document.getElementById('badgeCuotasEdif').innerText = `Zona ${zona} - Cat. ${cats.edificado}`;
+        document.getElementById('badgeCuotasBald').innerText = `Zona ${zona} - Cat. ${cats.baldio} (${etqAdic})`;
+    }
+
+    function construirHojaNormalizada(tituloMes, datosMes, anio, mes) {
+        const zBase = datosMes.zonasBase;
+        const adicMap = datosMes.adicBaldio || {};
+        const getZ = (z) => zBase[z] || zBase['2C'] || RESPALDO_OCT_2026.zonasBase[z];
+        const getAdic = (z) => adicMap[z] !== undefined ? adicMap[z] : obtenerPorcentajeBaldioPorFecha(anio, mes, z);
+
+        const aoa = [
+            [tituloMes, null, null, null, null, 'PARÁMETROS FIJOS DEL MES', null],
+            ['ZONA', 'AUM.FTE.', 'AUM.SUP.', 'CAR. FIJO', '% ADIC. BALDIO', 'CONCEPTO', 'IMPORTE ($)']
+        ];
+
+        ORDEN_ZONAS.forEach((z, idx) => {
+            const vals = getZ(z);
+            let paramNombre = null;
+            let paramValor = null;
+            if (idx === 0) { paramNombre = 'FTE ALUMB';  paramValor = datosMes.alumbFrente || 0; }
+            if (idx === 1) { paramNombre = 'ALUMB FIJO'; paramValor = datosMes.alumbFijo || 0; }
+            if (idx === 2) { paramNombre = 'BOMBEROS';   paramValor = datosMes.bomberos || 0; }
+
+            aoa.push([
+                z,
+                Number((vals.aumFte || 0).toFixed(6)),
+                Number((vals.aumSup || 0).toFixed(6)),
+                Number((vals.carFijo || 0).toFixed(6)),
+                getAdic(z),
+                paramNombre,
+                paramValor !== null ? Number(paramValor.toFixed(4)) : null
+            ]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [
+            { wch: 13 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }
+        ];
+        return ws;
+    }
+
+    function exportarExcelUnificado() {
+        const claves = Object.keys(DATOS_SOLAPAS).sort();
+        if (claves.length === 0) {
+            alert('Primero selecciona tu planilla Excel (ej. CALCULO TASA URBANA-1.xls) para extraer y unificar sus solapas.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        const resumenAoa = [[
+            'PERIODO (AAAA-MM)', 'SOLAPA ESTANDAR', 'SOLAPA ORIGINAL', 'ZONA',
+            'CAT. EDIF', 'CAT. BALDIO', '% ADIC. BALDIO',
+            'AUM.FTE. (ANUAL)', 'AUM.SUP. (ANUAL)', 'CAR. FIJO',
+            'FTE ALUMB ($)', 'ALUMB FIJO ($)', 'BOMBEROS ($)'
+        ]];
+
+        const hojasIndividuales = [];
+
+        claves.forEach(clave => {
+            const datosMes = DATOS_SOLAPAS[clave];
+            const [anioStr, mesStr] = clave.split('-');
+            const anioNum = parseInt(anioStr, 10);
+            const mesNum = parseInt(mesStr, 10);
+            const nombreEstandar = `${NOMBRES_MESES_LARGOS[mesNum - 1]} ${anioStr}`;
+
+            ORDEN_ZONAS.forEach(z => {
+                const vals = datosMes.zonasBase[z] || datosMes.zonasBase['2C'] || RESPALDO_OCT_2026.zonasBase[z];
+                const adicPct = (datosMes.adicBaldio && datosMes.adicBaldio[z] !== undefined)
+                    ? datosMes.adicBaldio[z]
+                    : obtenerPorcentajeBaldioPorFecha(anioNum, mesNum, z);
+
+                resumenAoa.push([
+                    clave,
+                    nombreEstandar,
+                    datosMes.nombreSolapa,
+                    z,
+                    MAPA_ZONAS[z].edificado,
+                    MAPA_ZONAS[z].baldio,
+                    adicPct,
+                    Number((vals.aumFte || 0).toFixed(6)),
+                    Number((vals.aumSup || 0).toFixed(6)),
+                    Number((vals.carFijo || 0).toFixed(6)),
+                    Number((datosMes.alumbFrente || 0).toFixed(4)),
+                    Number((datosMes.alumbFijo || 0).toFixed(4)),
+                    Number((datosMes.bomberos || 0).toFixed(4))
+                ]);
+            });
+
+            hojasIndividuales.push({ nombreEstandar, datosMes, anioNum, mesNum });
+        });
+
+        const wsResumen = XLSX.utils.aoa_to_sheet(resumenAoa);
+        wsResumen['!cols'] = [
+            { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 11 },
+            { wch: 11 }, { wch: 12 }, { wch: 15 },
+            { wch: 18 }, { wch: 18 }, { wch: 16 },
+            { wch: 15 }, { wch: 15 }, { wch: 15 }
+        ];
+        XLSX.utils.book_append_sheet(wb, wsResumen, 'RESUMEN_UNIFICADO');
+
+        hojasIndividuales.slice().reverse().forEach(item => {
+            const sheetTitle = item.nombreEstandar.substring(0, 31);
+            const wsMes = construirHojaNormalizada(item.nombreEstandar, item.datosMes, item.anioNum, item.mesNum);
+            XLSX.utils.book_append_sheet(wb, wsMes, sheetTitle);
+        });
+
+        XLSX.writeFile(wb, 'Tarifas_TGIU_Unificadas_Limpio.xlsx');
+    }
+
+    function descargarPlantillaExcel() {
+        const anioStr = prompt("¿Para qué año quieres generar las 12 solapas mensuales?", "2026");
+        if (!anioStr) return;
+        const anio = parseInt(anioStr.trim(), 10) || 2026;
+
+        const wb = XLSX.utils.book_new();
+        NOMBRES_MESES_LARGOS.forEach((mes, idx) => {
+            const tituloSolapa = `${mes} ${anio}`;
+            XLSX.utils.book_append_sheet(
+                wb,
+                construirHojaNormalizada(tituloSolapa, RESPALDO_OCT_2026, anio, idx + 1),
+                tituloSolapa
+            );
+        });
+
+        XLSX.writeFile(wb, `Plantilla_Tarifas_TGIU_${anio}.xlsx`);
+    }
+
+    function parsearNombreSolapa(nombre) {
+        const limpio = nombre.trim().toUpperCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ');
+        if (limpio.includes('BIS') || limpio.includes('REAJUSTE') || limpio.includes('PERIODO') || limpio.includes('HOJA') || limpio.includes('AUGE') || limpio.includes('MINOVES') || limpio.includes('RESUMEN')) {
+            return null;
+        }
+
+        const mesesMap = {
+            'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+            'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+            'SEPTIEMBRE': 9, 'SETIEMBRE': 9, 'OCTUBRE': 10,
+            'NOVIEMBRE': 11, 'DICIEMBRE': 12
+        };
+
+        let mesNum = null;
+        for (const [mNombre, num] of Object.entries(mesesMap)) {
+            if (limpio.startsWith(mNombre + ' ')) {
+                mesNum = num;
+                break;
+            }
+        }
+        if (!mesNum) return null;
+
+        const partes = limpio.split(' ');
+        const anioStr = partes[partes.length - 1];
+        if (!/^\d{2,4}$/.test(anioStr)) return null;
+
+        let anio = parseInt(anioStr, 10);
+        if (anio < 100) anio += 2000;
+
+        return `${anio}-${String(mesNum).padStart(2, '0')}`;
+    }
+
+    function procesarExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            DATOS_SOLAPAS = {};
+            let solapasLeidas = 0;
+
+            workbook.SheetNames.forEach(sheetName => {
+                const claveMes = parsearNombreSolapa(sheetName);
+                if (!claveMes) return;
+
+                const sheet = workbook.Sheets[sheetName];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+                const infoMes = extraerDatosDeFilasSolapa(sheetName, rows);
+                if (infoMes) {
+                    DATOS_SOLAPAS[claveMes] = infoMes;
+                    solapasLeidas++;
+                }
+            });
+
+            const clavesOrdenadas = Object.keys(DATOS_SOLAPAS).sort();
+            if (clavesOrdenadas.length > 0) {
+                document.getElementById('estadoExcel').innerHTML =
+                    `✅ Archivo cargado: <strong>${solapasLeidas} solapas mensuales</strong> indexadas (${clavesOrdenadas[0]} a ${clavesOrdenadas[clavesOrdenadas.length - 1]}). Ya puedes pulsar <strong>"🧹 Exportar Excel Unificado"</strong>.`;
+            } else {
+                document.getElementById('estadoExcel').innerHTML =
+                    `⚠️ No se detectaron solapas mensuales válidas. Revisa el formato del Excel.`;
+            }
+            
+            generarLiquidacion();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function extraerDatosDeFilasSolapa(nombreSolapa, rows) {
+        const zonasBase = {};
+        const adicBaldio = {};
+        let alumbFrente = 0;
+        let alumbFijo = 0;
+        let bomberos = 0;
+
+        let zonaActual = null;
+        const catEdifToZona = { 1: '1A', 2: '1B', 5: '2A', 6: '2B', 9: '3', 11: '2C' };
+
+        for (let r = 0; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+
+            const z0 = normalizarZona(row[0]);
+            const cat = row[1] !== null ? parseInt(row[1], 10) : NaN;
+
+            if (z0) {
+                if (!(z0 === '3' && cat === 12)) {
+                    zonaActual = z0;
+                } else {
+                    zonaActual = null;
+                }
+            } else if (row[0] !== null && String(row[0]).trim() !== '') {
+                zonaActual = null;
+            }
+
+            if (zonaActual && catEdifToZona[cat] === zonaActual) {
+                const aumFte = parseFloat(row[2]) || 0;
+                const aumSup = parseFloat(row[3]) || 0;
+                const adicDec = parseFloat(row[4]);
+                const carFijo = parseFloat(row[5]) || 0;
+
+                if (!zonasBase[zonaActual] && (aumFte > 0 || carFijo > 0)) {
+                    zonasBase[zonaActual] = { aumFte, aumSup, carFijo };
+                    if (!isNaN(adicDec)) {
+                        adicBaldio[zonaActual] = Math.round(adicDec * 100);
+                    }
+                }
+            }
+
+            if (row[0] !== null && String(row[0]).includes('5000')) {
+                const fijo5000 = parseFloat(row[5]) || 0;
+                if (zonasBase['2C'] && fijo5000 > 0) {
+                    zonasBase['2C+5000'] = {
+                        aumFte: zonasBase['2C'].aumFte,
+                        aumSup: zonasBase['2C'].aumSup,
+                        carFijo: fijo5000
+                    };
+                    if (adicBaldio['2C'] !== undefined) {
+                        adicBaldio['2C+5000'] = adicBaldio['2C'];
+                    }
+                }
+            }
+        }
+
+        for (let r = 0; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c++) {
+                const val = row[c] !== null ? String(row[c]).toUpperCase().trim() : '';
+                if (val === 'ZONA' && (c >= 10 || Object.keys(zonasBase).length === 0)) {
+                    let colFte = -1, colSup = -1, colFijo = -1, colAdic = -1;
+                    for (let cc = c + 1; cc < row.length; cc++) {
+                        const h = row[cc] !== null ? String(row[cc]).toUpperCase().trim() : '';
+                        if (h.includes('FTE')) colFte = cc;
+                        else if (h.includes('SUP') && !h.includes('MTS')) colSup = cc;
+                        else if (h.includes('FIJO')) colFijo = cc;
+                        else if (h.includes('ADIC')) colAdic = cc;
+                    }
+                    if (colFte !== -1 && colSup !== -1) {
+                        for (let rr = r + 1; rr < Math.min(r + 10, rows.length); rr++) {
+                            const rData = rows[rr];
+                            if (!rData) continue;
+                            const zz = normalizarZona(rData[c]);
+                            if (!zz) continue;
+
+                            const vFte = parseFloat(rData[colFte]) || 0;
+                            const vSup = parseFloat(rData[colSup]) || 0;
+                            const vFijo = colFijo !== -1 ? (parseFloat(rData[colFijo]) || 0) : 0;
+                            const vAdic = colAdic !== -1 ? parseFloat(rData[colAdic]) : NaN;
+
+                            if (!zonasBase[zz] && (vFte > 0 || vFijo > 0)) {
+                                if (zz === '2C+5000' && vFte === 0 && zonasBase['2C']) {
+                                    zonasBase['2C+5000'] = {
+                                        aumFte: zonasBase['2C'].aumFte,
+                                        aumSup: zonasBase['2C'].aumSup,
+                                        carFijo: vFijo
+                                    };
+                                } else {
+                                    zonasBase[zz] = { aumFte: vFte, aumSup: vSup, carFijo: vFijo };
+                                }
+                            }
+                            if (!isNaN(vAdic) && adicBaldio[zz] === undefined) {
+                                adicBaldio[zz] = vAdic;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (zonasBase['2C'] && !zonasBase['2C+5000']) {
+            zonasBase['2C+5000'] = { ...zonasBase['2C'] };
+        }
+        if (adicBaldio['2C'] !== undefined && adicBaldio['2C+5000'] === undefined) {
+            adicBaldio['2C+5000'] = adicBaldio['2C'];
+        }
+
+        for (let r = 0; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c++) {
+                const celda = row[c] !== null ? String(row[c]).toUpperCase().trim() : '';
+                if (!celda) continue;
+
+                if (celda.includes('FTE ALUMB')) {
+                    if (r + 1 < rows.length && rows[r + 1][c] !== null && !isNaN(parseFloat(rows[r + 1][c]))) {
+                        alumbFrente = parseFloat(rows[r + 1][c]) || alumbFrente;
+                        const h1 = row[c + 1] !== null ? String(row[c + 1]).toUpperCase() : '';
+                        const h2 = row[c + 2] !== null ? String(row[c + 2]).toUpperCase() : '';
+                        if (h1.includes('FIJO') && rows[r + 1][c + 1] !== null) {
+                            alumbFijo = parseFloat(rows[r + 1][c + 1]) || 0;
+                        }
+                        if (h2.includes('BOMBERO') && rows[r + 1][c + 2] !== null) {
+                            bomberos = parseFloat(rows[r + 1][c + 2]) || 0;
+                        }
+                    } else if (c + 1 < row.length && row[c + 1] !== null && !isNaN(parseFloat(row[c + 1]))) {
+                        alumbFrente = parseFloat(row[c + 1]) || alumbFrente;
+                    }
+                }
+
+                if (celda === 'ALUMB FIJO' && c + 1 < row.length && !isNaN(parseFloat(row[c + 1]))) {
+                    alumbFijo = parseFloat(row[c + 1]) || 0;
+                }
+                if (celda === 'BOMBEROS' && c + 1 < row.length && !isNaN(parseFloat(row[c + 1]))) {
+                    bomberos = parseFloat(row[c + 1]) || 0;
+                }
+                if (celda.includes('MTS DE FTE X MES') && alumbFrente === 0) {
+                    const num = extraerNumeroDeTexto(celda);
+                    if (num !== null) alumbFrente = num;
+                }
+                if (celda.includes('BOMBERO') && !celda.includes('FIJO') && celda !== 'BOMBEROS' && bomberos === 0) {
+                    const num = extraerNumeroDeTexto(celda);
+                    if (num !== null) bomberos = num;
+                }
+            }
+        }
+
+        if (Object.keys(zonasBase).length === 0) return null;
+
+        return {
+            nombreSolapa,
+            zonasBase,
+            adicBaldio,
+            alumbFrente,
+            alumbFijo,
+            bomberos
+        };
+    }
+
+    function obtenerDatosParaMes(anio, mes) {
+        const claveBuscada = `${anio}-${String(mes).padStart(2, '0')}`;
+        const clavesDisponibles = Object.keys(DATOS_SOLAPAS).sort();
+
+        if (clavesDisponibles.length === 0) {
+            return RESPALDO_OCT_2026;
+        }
+
+        if (DATOS_SOLAPAS[claveBuscada]) {
+            return DATOS_SOLAPAS[claveBuscada];
+        }
+
+        let mejorClave = clavesDisponibles[0];
+        for (const k of clavesDisponibles) {
+            if (k <= claveBuscada) {
+                mejorClave = k;
+            } else {
+                break;
+            }
+        }
+        return DATOS_SOLAPAS[mejorClave];
+    }
+
+    function redondear2(num) {
+        return Math.round((num + Number.EPSILON) * 100) / 100;
+    }
+
+    function leerOpcionesEstado(prefijo) {
+        return {
+            tieneAlumb: document.getElementById(prefijo + '_alumbrado').checked,
+            tieneFop: document.getElementById(prefijo + '_fop').checked,
+            tieneVial: document.getElementById(prefijo + '_fondoVial').checked,
+            tieneFana: document.getElementById(prefijo + '_fana').checked,
+            tieneBomb: document.getElementById(prefijo + '_bomberos').checked
+        };
+    }
+
+    function calcularEstado(datosMes, zona, esBaldio, opciones, anio, mes) {
+        const infoZona = MAPA_ZONAS[zona];
+        const categoria = esBaldio ? infoZona.baldio : infoZona.edificado;
+        const modoAdic = document.getElementById('modoAdicBaldio').value;
+
+        let adicPct = parseFloat(document.getElementById('adicBaldioPct').value) || 0;
+        if (modoAdic === 'excel') {
+            if (datosMes.adicBaldio && datosMes.adicBaldio[zona] !== undefined) {
+                adicPct = datosMes.adicBaldio[zona];
+            } else {
+                adicPct = obtenerPorcentajeBaldioPorFecha(anio, mes, zona);
+            }
+        }
+
+        const factorBaldio = esBaldio ? (1 + adicPct / 100) : 1;
+
+        const baseZ = datosMes.zonasBase[zona] || datosMes.zonasBase['2C'] || RESPALDO_OCT_2026.zonasBase[zona];
+        const etq = esBaldio ? `BALDIO +${adicPct}%` : 'EDIF.';
+
+        const frente = parseFloat(document.getElementById('frente').value) || 0;
+        const sup = parseFloat(document.getElementById('superficie').value) || 0;
+        const mtsAlumb = parseFloat(document.getElementById('metrosAlumb').value) || 0;
+
+        const cFrente = (baseZ.aumFte / 12) * factorBaldio;
+        const cSup = (baseZ.aumSup / 12) * factorBaldio;
+        const cFijo = baseZ.carFijo * factorBaldio;
+
+        const cAlumbFrente = datosMes.alumbFrente || 0;
+        const cAlumbFijo = datosMes.alumbFijo || 0;
+        const cBomberos = datosMes.bomberos || 0;
+
+        const impFrente = redondear2(frente * cFrente);
+        const impSup = redondear2(sup * cSup);
+        const impFijo = redondear2(cFijo);
+        const acumBase = redondear2(impFrente + impSup + impFijo);
+
+        const impFop = opciones.tieneFop ? redondear2(acumBase * 0.15) : 0;
+        const impVial = opciones.tieneVial ? redondear2(acumBase * 0.10) : 0;
+        const impFana = opciones.tieneFana ? redondear2(acumBase * 0.01) : 0;
+
+        const impAlumbFrente = opciones.tieneAlumb ? redondear2(mtsAlumb * cAlumbFrente) : 0;
+        const impBomberos = opciones.tieneBomb ? redondear2(cBomberos) : 0;
+        const impAlumbFijo = opciones.tieneAlumb ? redondear2(cAlumbFijo) : 0;
+
+        const subtotal = redondear2(acumBase + impFop + impVial + impFana + impAlumbFrente + impBomberos + impAlumbFijo);
+        const totalCuota = Math.round(subtotal);
+        const ajusteRedondeo = redondear2(totalCuota - subtotal);
+
+        const items = [
+            { cod: 1, concepto: 'TGI Urbano', detalle: `TGIU ${zona} (Cat.${categoria}) FRENTE (${etq}) ${frente.toFixed(2)}m x ${cFrente.toFixed(4)}`, importe: impFrente },
+            { cod: 1, concepto: 'TGI Urbano', detalle: `TGIU ${zona} (Cat.${categoria}) SUP. (${etq}) ${sup.toFixed(2)}m² x ${cSup.toFixed(4)}`, importe: impSup },
+            { cod: 1, concepto: 'TGI Urbano', detalle: `TGIU ${zona} (Cat.${categoria}) FIJO (${etq}) ${cFijo.toFixed(4)} $`, importe: impFijo }
+        ];
+
+        if (opciones.tieneFop) {
+            items.push({ cod: 13, concepto: 'TGIU Fondo Obras Pub', detalle: `FOP ${acumBase.toFixed(2)} acum. x 0.1500`, importe: impFop });
+        }
+        if (opciones.tieneVial) {
+            items.push({ cod: 27, concepto: 'TGIU Fondo consolida', detalle: `FONDO C R VIAL 10% ${acumBase.toFixed(2)} x 0.1000`, importe: impVial });
+        }
+        if (opciones.tieneFana) {
+            items.push({ cod: 12, concepto: 'TGIU F.A.N.A.', detalle: `F.A.N.A 10X1000 ${acumBase.toFixed(2)} x 0.0100`, importe: impFana });
+        }
+        if (opciones.tieneAlumb) {
+            items.push({ cod: 10, concepto: 'TGIU Alumbrado', detalle: `ALUMB. FRENTE ${mtsAlumb.toFixed(2)}m x ${cAlumbFrente.toFixed(4)}`, importe: impAlumbFrente });
+            if (cAlumbFijo > 0) {
+                items.push({ cod: 10, concepto: 'TGIU Alumbrado', detalle: `ALUMB. FIJO ${cAlumbFijo.toFixed(4)} $`, importe: impAlumbFijo });
+            }
+        }
+        if (opciones.tieneBomb) {
+            items.push({ cod: 11, concepto: 'TGIU Bomberos', detalle: `BOMBEROS ${cBomberos.toFixed(4)} $`, importe: impBomberos });
+        }
+        if (ajusteRedondeo !== 0) {
+            items.push({ cod: 99, concepto: 'Ajuste Redondeo', detalle: 'Redondeo comercial de cuota', importe: ajusteRedondeo });
+        }
+
+        return { categoria, totalCuota, items, adicPct };
+    }
+
+    function generarLiquidacion() {
+        const desdeVal = document.getElementById('fechaDesde').value;
+        const hastaVal = document.getElementById('fechaHasta').value;
+        const padron = document.getElementById('padron').value || '015008U';
+        const zona = document.getElementById('zona').value;
+
+        if (!desdeVal || !hastaVal) return;
+
+        const [a1, m1] = desdeVal.split('-').map(Number);
+        const [a2, m2] = hastaVal.split('-').map(Number);
+
+        if (a2 < a1 || (a2 === a1 && m2 < m1)) {
+            alert('La "Fecha Hasta" no puede ser anterior a la "Fecha Desde".');
+            return;
+        }
+
+        const opcEdif = leerOpcionesEstado('edif');
+        const opcBald = leerOpcionesEstado('bald');
+
+        mesesCalculados = [];
+        let anioActual = a1;
+        let mesActual = m1;
+
+        while (anioActual < a2 || (anioActual === a2 && mesActual <= m2)) {
+            const datosMes = obtenerDatosParaMes(anioActual, mesActual);
+
+            let mesVenc = mesActual + 1;
+            let anioVenc = anioActual;
+            if (mesVenc > 12) { mesVenc = 1; anioVenc++; }
+            const vencimiento = `10/${String(mesVenc).padStart(2, '0')}/${anioVenc}`;
+            const cuotaNombre = NOMBRES_MESES[mesActual - 1];
+
+            const resEdif = calcularEstado(datosMes, zona, false, opcEdif, anioActual, mesActual);
+            const resBald = calcularEstado(datosMes, zona, true, opcBald, anioActual, mesActual);
+
+            mesesCalculados.push({
+                padron,
+                anio: anioActual,
+                cuotaNombre,
+                zona,
+                nombreSolapa: datosMes.nombreSolapa,
+                vencimiento,
+                edif: resEdif,
+                bald: resBald
+            });
+
+            mesActual++;
+            if (mesActual > 12) {
+                mesActual = 1;
+                anioActual++;
+            }
+        }
+
+        renderizarTablasCuotasSeparadas();
+        if (mesesCalculados.length > 0) {
+            seleccionarMes(mesesCalculados.length - 1);
+        }
+    }
+
+    function renderizarTablasCuotasSeparadas() {
+        const tbodyEdif = document.querySelector('#tablaCuotasEdif tbody');
+        const tbodyBald = document.querySelector('#tablaCuotasBald tbody');
+        tbodyEdif.innerHTML = '';
+        tbodyBald.innerHTML = '';
+
+        let sumaEdif = 0;
+        let sumaBald = 0;
+
+        mesesCalculados.forEach((m, idx) => {
+            sumaEdif += m.edif.totalCuota;
+            sumaBald += m.bald.totalCuota;
+
+            const trEdif = document.createElement('tr');
+            trEdif.id = `fila-edif-${idx}`;
+            trEdif.onclick = () => seleccionarMes(idx);
+            trEdif.innerHTML = `
+                <td>${m.padron}</td>
+                <td class="center">${m.anio}</td>
+                <td class="center"><strong>${m.cuotaNombre}</strong></td>
+                <td><span class="tag-solapa">${m.nombreSolapa}</span></td>
+                <td class="center">${m.vencimiento}</td>
+                <td class="num" style="color:#065f46;"><strong>${formatearMoneda(m.edif.totalCuota)}</strong></td>
+            `;
+            tbodyEdif.appendChild(trEdif);
+
+            const trBald = document.createElement('tr');
+            trBald.id = `fila-bald-${idx}`;
+            trBald.onclick = () => seleccionarMes(idx);
+            trBald.innerHTML = `
+                <td>${m.padron}</td>
+                <td class="center">${m.anio}</td>
+                <td class="center"><strong>${m.cuotaNombre}</strong></td>
+                <td><span class="tag-solapa">${m.nombreSolapa} (+${m.bald.adicPct}%)</span></td>
+                <td class="center">${m.vencimiento}</td>
+                <td class="num" style="color:#92400e;"><strong>${formatearMoneda(m.bald.totalCuota)}</strong></td>
+            `;
+            tbodyBald.appendChild(trBald);
+        });
+
+        const diffTotal = redondear2(sumaBald - sumaEdif);
+        document.getElementById('cantEdif').innerText = mesesCalculados.length;
+        document.getElementById('cantBald').innerText = mesesCalculados.length;
+        document.getElementById('totalAcumEdif').innerText = formatearMoneda(sumaEdif);
+        document.getElementById('totalAcumBald').innerText = formatearMoneda(sumaBald);
+        document.getElementById('resDiferencia').innerText = formatearMoneda(diffTotal);
+    }
+
+    function seleccionarMes(idx) {
+        mesSeleccionadoIdx = idx;
+        document.querySelectorAll('#tablaCuotasEdif tbody tr').forEach(tr => tr.classList.remove('selected-edif'));
+        document.querySelectorAll('#tablaCuotasBald tbody tr').forEach(tr => tr.classList.remove('selected-bald'));
+
+        const filaE = document.getElementById(`fila-edif-${idx}`);
+        const filaB = document.getElementById(`fila-bald-${idx}`);
+        if (filaE) {
+            filaE.classList.add('selected-edif');
+            const tdNumE = filaE.querySelector('.num');
+            if (tdNumE) tdNumE.style.color = '#ffffff';
+        }
+        if (filaB) {
+            filaB.classList.add('selected-bald');
+            const tdNumB = filaB.querySelector('.num');
+            if (tdNumB) tdNumB.style.color = '#ffffff';
+        }
+
+        mesesCalculados.forEach((_, i) => {
+            if (i !== idx) {
+                const fe = document.getElementById(`fila-edif-${i}`);
+                const fb = document.getElementById(`fila-bald-${i}`);
+                if (fe) fe.querySelector('.num').style.color = '#065f46';
+                if (fb) fb.querySelector('.num').style.color = '#92400e';
+            }
+        });
+
+        const infoMes = mesesCalculados[idx];
+
+        document.getElementById('tituloDetalleEdif').innerText = `🏠 Conformación EDIFICADO - ${infoMes.cuotaNombre} ${infoMes.anio} (${infoMes.nombreSolapa})`;
+        document.getElementById('subtituloDetalleEdif').innerText = `Zona ${infoMes.zona} - Categ. ${infoMes.edif.categoria}`;
+
+        document.getElementById('tituloDetalleBald').innerText = `🌱 Conformación BALDÍO - ${infoMes.cuotaNombre} ${infoMes.anio} (${infoMes.nombreSolapa})`;
+        document.getElementById('subtituloDetalleBald').innerText = `Zona ${infoMes.zona} - Categ. ${infoMes.bald.categoria} (+${infoMes.bald.adicPct}%)`;
+
+        renderizarTablaDetalle('#tablaDetalleEdif tbody', infoMes.edif, 'EDIFICADO', infoMes.cuotaNombre, infoMes.anio, '#ecfdf5');
+        renderizarTablaDetalle('#tablaDetalleBald tbody', infoMes.bald, 'BALDÍO', infoMes.cuotaNombre, infoMes.anio, '#fffbeb');
+    }
+
+    function renderizarTablaDetalle(selectorTbody, datosEstado, etiquetaEstado, mesNombre, anio, colorFondoTotal) {
+        const tbody = document.querySelector(selectorTbody);
+        tbody.innerHTML = '';
+
+        datosEstado.items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="center">${item.cod}</td>
+                <td>${item.concepto}</td>
+                <td>${item.detalle}</td>
+                <td class="num">${item.importe.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const trTotal = document.createElement('tr');
+        trTotal.style.backgroundColor = colorFondoTotal;
+        trTotal.style.fontWeight = 'bold';
+        trTotal.innerHTML = `
+            <td colspan="3" style="text-align: right; padding-right: 10px;">TOTAL ${etiquetaEstado} (${mesNombre} ${anio}):</td>
+            <td class="num" style="font-size: 0.95rem; color: #0f172a;">${formatearMoneda(datosEstado.totalCuota)}</td>
+        `;
+        tbody.appendChild(trTotal);
+    }
+
+    function cargarLogoBase64(ruta) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = function() {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width;
+                    canvas.height = img.naturalHeight || img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve({
+                        dataUrl: canvas.toDataURL('image/png'),
+                        width: canvas.width,
+                        height: canvas.height
+                    });
+                } catch (e) {
+                    resolve(null);
+                }
+            };
+            img.onerror = function() {
+                resolve(null);
+            };
+            img.src = ruta;
+        });
+    }
+
+    async function descargarPDF() {
+        if (!mesesCalculados || mesesCalculados.length === 0) {
+            alert('Primero calcula las cuotas para poder exportar el PDF.');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        const padron = document.getElementById('padron').value || '015008U';
+        const titular = (document.getElementById('titular').value || '').trim();
+        const zona = document.getElementById('zona').value;
+        const cats = MAPA_ZONAS[zona];
+        const desde = document.getElementById('fechaDesde').value;
+        const hasta = document.getElementById('fechaHasta').value;
+        const frente = parseFloat(document.getElementById('frente').value) || 0;
+        const sup = parseFloat(document.getElementById('superficie').value) || 0;
+
+        // Cargar logo.png desde la misma carpeta
+        const logo = await cargarLogoBase64('logo.png');
+
+        doc.setFillColor(30, 58, 138);
+        doc.rect(14, 12, 182, 18, 'F');
+
+        let textoX = 18;
+        if (logo && logo.dataUrl) {
+            const maxH = 14;
+            const maxW = 36;
+            const ratio = logo.width / logo.height;
+            let logoW = maxH * ratio;
+            let logoH = maxH;
+            if (logoW > maxW) {
+                logoW = maxW;
+                logoH = maxW / ratio;
+            }
+            const logoY = 12 + (18 - logoH) / 2;
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(16, logoY - 0.8, logoW + 2, logoH + 1.6, 1, 1, 'F');
+            doc.addImage(logo.dataUrl, 'PNG', 17, logoY, logoW, logoH);
+            textoX = 17 + logoW + 5;
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12.5);
+        doc.text('LIQUIDACIÓN COMPARATIVA TGIU - EDIFICADO vs. BALDÍO', textoX, 22.5);
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text('1. DATOS DEL PADRÓN Y PARÁMETROS DEL LOTE', 14, 37);
+
+        doc.autoTable({
+            startY: 39,
+            theme: 'grid',
+            styles: { fontSize: 8.5, cellPadding: 2.2, textColor: [30, 41, 59] },
+            headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+            body: [
+                [
+                    { content: `Titular: ${titular}`, colSpan: 2, styles: { fontStyle: 'bold' } }
+                ],
+                [
+                    { content: `Padrón: ${padron}`, styles: { fontStyle: 'bold' } },
+                    `Zona: ${zona} (Edif: Cat. ${cats.edificado} | Bald: Cat. ${cats.baldio})`
+                ],
+                [
+                    `Frente: ${frente.toFixed(2)} mts`,
+                    `Superficie: ${sup.toFixed(2)} m²`
+                ]
+            ]
+        });
+
+        let sumaEdif = 0;
+        let sumaBald = 0;
+        const filasTabla = mesesCalculados.map(m => {
+            sumaEdif += m.edif.totalCuota;
+            sumaBald += m.bald.totalCuota;
+            const difMes = redondear2(m.bald.totalCuota - m.edif.totalCuota);
+            return [
+                `${m.cuotaNombre} ${m.anio}`,
+                `${m.nombreSolapa} (+${m.bald.adicPct}%)`,
+                m.vencimiento,
+                formatearMoneda(m.edif.totalCuota),
+                formatearMoneda(m.bald.totalCuota),
+                formatearMoneda(difMes)
+            ];
+        });
+        const difTotal = redondear2(sumaBald - sumaEdif);
+
+        let cursorY = doc.lastAutoTable.finalY + 7;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.text('2. DETALLE MENSUAL DE CUOTAS (EDIFICADO vs. BALDÍO)', 14, cursorY);
+
+        doc.autoTable({
+            startY: cursorY + 2,
+            head: [['Período', 'Solapa / Recargo', 'Vencimiento', 'Edificado ($)', 'Baldío ($)', 'Diferencia ($)']],
+            body: filasTabla,
+            foot: [[
+                'TOTAL',
+                '',
+                '',
+                formatearMoneda(sumaEdif),
+                formatearMoneda(sumaBald),
+                formatearMoneda(difTotal)
+            ]],
+            theme: 'striped',
+            styles: { fontSize: 8.3, cellPadding: 2.2 },
+            headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold' },
+            footStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold' },
+            columnStyles: {
+                0: { halign: 'center', fontStyle: 'bold' },
+                2: { halign: 'center' },
+                3: { halign: 'right', textColor: [6, 95, 70], fontStyle: 'bold' },
+                4: { halign: 'right', textColor: [146, 64, 14], fontStyle: 'bold' },
+                5: { halign: 'right', textColor: [30, 64, 175], fontStyle: 'bold' }
+            }
+        });
+
+        doc.save(`Liquidacion_TGIU_${padron}_${desde}_a_${hasta}.pdf`);
+    }
+</script>
+
+</body>
+</html>
